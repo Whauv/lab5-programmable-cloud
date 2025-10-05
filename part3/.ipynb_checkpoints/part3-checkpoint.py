@@ -5,9 +5,8 @@ import time
 import googleapiclient.discovery
 from google.oauth2 import service_account
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
+# Defining configuration 
+
 SERVICE_ACCOUNT_FILE = '/home/prch5047/lab5_programmable cloud/service-credentials.json'
 PROJECT_ID = "lab5cloud-474120"  # Your project ID
 ZONE = "us-west1-b"
@@ -17,7 +16,7 @@ MACHINE_TYPE = "f1-micro"
 IMAGE_FAMILY = "ubuntu-2204-lts"
 IMAGE_PROJECT = "ubuntu-os-cloud"
 
-# Load service account credentials
+# Loading service account credentials
 print("Loading service account credentials...")
 try:
     credentials = service_account.Credentials.from_service_account_file(
@@ -32,12 +31,12 @@ except FileNotFoundError:
 
 print(f"Project ID: {PROJECT_ID}")
 
-# Build compute service
+# Building compute service
 compute = googleapiclient.discovery.build('compute', 'v1', credentials=credentials)
 
-# ============================================================================
-# VM-2 STARTUP SCRIPT (Flask installation on final VM)
-# ============================================================================
+
+# Defining the VM-2 startup script
+
 VM2_STARTUP_SCRIPT = """#!/bin/bash
 set -e
 exec > >(tee -a /var/log/vm2-startup.log)
@@ -71,9 +70,8 @@ nohup flask run -h 0.0.0.0 > /var/log/flask.log 2>&1 &
 echo "=== VM-2 Flask Installation Complete at $(date) ==="
 """
 
-# ============================================================================
-# VM-1 PYTHON SCRIPT (runs on VM-1 to create VM-2)
-# ============================================================================
+# Defining VM-1 Python script
+
 VM1_LAUNCH_SCRIPT = f"""#!/usr/bin/env python3
 import time
 import googleapiclient.discovery
@@ -209,9 +207,8 @@ if external_ip:
 print("VM-1: Job complete!")
 """
 
-# ============================================================================
-# VM-1 STARTUP SCRIPT (sets up VM-1 and runs the launch script)
-# ============================================================================
+# Setting up VM-1 Startup script
+
 VM1_STARTUP_SCRIPT = """#!/bin/bash
 set -e
 exec > >(tee -a /var/log/vm1-startup.log)
@@ -247,10 +244,9 @@ python3 /srv/vm1-launch-script.py
 echo "=== VM-1 Startup Complete at $(date) ==="
 """
 
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
+# Defining Helper functions
 
+# Defining the wait opeartion
 def wait_for_operation(compute, project, zone, operation):
     """Wait for a zone operation to complete."""
     print(f"  Waiting for operation to complete...")
@@ -268,6 +264,7 @@ def wait_for_operation(compute, project, zone, operation):
             return result
         time.sleep(1)
 
+# Getting image from family
 def get_image_from_family(compute, image_project, family):
     """Get the latest image from a family."""
     image_response = compute.images().getFromFamily(
@@ -276,9 +273,7 @@ def get_image_from_family(compute, image_project, family):
     ).execute()
     return image_response['selfLink']
 
-# ============================================================================
 # MAIN FUNCTION
-# ============================================================================
 
 def main():
     """Main function to create VM-1."""
@@ -291,22 +286,22 @@ def main():
     print(f"VM-2 (Flask App): {VM2_NAME}")
     
     try:
-        # Read service credentials file
+        # Reading service credentials file
         print("\nReading service credentials...")
         with open(SERVICE_ACCOUNT_FILE, 'r') as f:
             service_creds_content = f.read()
         print("Service credentials file read successfully")
         
-        # Create config file content
+        # Creating config file content
         config_content = f"ZONE={ZONE}\nVM2_NAME={VM2_NAME}\nMACHINE_TYPE={MACHINE_TYPE}\n"
         
-        # Get image for VM-1
+        # Get the image for VM-1
         print("\nFetching Ubuntu image...")
         source_disk_image = get_image_from_family(compute, IMAGE_PROJECT, IMAGE_FAMILY)
         machine_type_url = f"zones/{ZONE}/machineTypes/{MACHINE_TYPE}"
         print("Ubuntu image retrieved")
         
-        # Create VM-1 configuration
+        # Creating VM-1 configuration
         print(f"\nCreating VM-1 '{VM1_NAME}'...")
         vm1_config = {
             'name': VM1_NAME,
@@ -337,7 +332,7 @@ def main():
             }
         }
         
-        # Create VM-1
+        # Creating VM-1
         operation = compute.instances().insert(
             project=PROJECT_ID,
             zone=ZONE,
@@ -347,7 +342,7 @@ def main():
         wait_for_operation(compute, PROJECT_ID, ZONE, operation['name'])
         print(f"VM-1 '{VM1_NAME}' created successfully!")
         
-        # Get VM-1 external IP
+        # Get the VM-1 external IP
         time.sleep(5)
         instance = compute.instances().get(
             project=PROJECT_ID,
