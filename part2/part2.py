@@ -5,25 +5,23 @@ import sys
 import googleapiclient.discovery
 import google.auth
 
-# Get credentials and project
+# Get the credentials and project
 credentials, _ = google.auth.default()
-PROJECT_ID = "lab5cloud-474120"  # Your project ID
+PROJECT_ID = "lab5cloud-474120"  # Giving the project id
 compute = googleapiclient.discovery.build('compute', 'v1', credentials=credentials)
 
-# ============================================================================
 # CONFIGURATION
-# ============================================================================
+
 ZONE = "us-west1-b"
-SOURCE_INSTANCE_NAME = "flask-tutorial-vm"  # The instance from Part 1
+SOURCE_INSTANCE_NAME = "flask-tutorial-vm"  # Giving the insance of part1
 SNAPSHOT_NAME = f"base-snapshot-{SOURCE_INSTANCE_NAME}"
 NEW_INSTANCE_PREFIX = "cloned-instance"
 MACHINE_TYPE = "f1-micro"
 NUM_CLONES = 3
 
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
+# Define the helper functions
 
+# Define the wait_for_operation for the zone operation
 def wait_for_operation(compute, project, zone, operation):
     """Wait for a zone operation to complete."""
     print(f"  Waiting for operation to complete...")
@@ -41,6 +39,7 @@ def wait_for_operation(compute, project, zone, operation):
             return result
         time.sleep(1)
 
+# Defining the wait_for_global_operation for completing the global operation
 def wait_for_global_operation(compute, project, operation):
     """Wait for a global operation to complete."""
     print(f"  Waiting for operation to complete...")
@@ -57,11 +56,13 @@ def wait_for_global_operation(compute, project, operation):
             return result
         time.sleep(1)
 
+# Defining list_instances to get the list of all the instances in the zone
 def list_instances(compute, project, zone):
     """List all instances in a zone."""
     result = compute.instances().list(project=project, zone=zone).execute()
     return result['items'] if 'items' in result else None
 
+# Defining the instance_exits
 def instance_exists(compute, project, zone, instance_name):
     """Check if an instance exists."""
     try:
@@ -74,6 +75,7 @@ def instance_exists(compute, project, zone, instance_name):
     except:
         return False
 
+# Defining the boot disl names for the instance
 def get_boot_disk_name(compute, project, zone, instance_name):
     """Get the boot disk name from an instance."""
     instance = compute.instances().get(
@@ -92,6 +94,7 @@ def get_boot_disk_name(compute, project, zone, instance_name):
     
     raise Exception("No boot disk found")
 
+# Checking whether 
 def snapshot_exists(compute, project, snapshot_name):
     """Check if a snapshot exists."""
     try:
@@ -103,15 +106,14 @@ def snapshot_exists(compute, project, snapshot_name):
     except:
         return False
 
-# ============================================================================
 # MAIN FUNCTIONS
-# ============================================================================
 
+# Defining tyhe process of creating snapshot 
 def create_snapshot(compute, project, zone, instance_name, snapshot_name):
     """Create a snapshot from the instance's boot disk."""
     print(f"\nStep 1: Creating snapshot '{snapshot_name}'...")
     
-    # Check if snapshot already exists
+    # Checking if snapshot already exists
     if snapshot_exists(compute, project, snapshot_name):
         print(f"  Snapshot '{snapshot_name}' already exists, skipping creation")
         return
@@ -121,7 +123,7 @@ def create_snapshot(compute, project, zone, instance_name, snapshot_name):
     disk_name = get_boot_disk_name(compute, project, zone, instance_name)
     print(f"  Boot disk found: {disk_name}")
     
-    # Create snapshot
+    # Creating required snapshot
     snapshot_body = {
         "name": snapshot_name,
         "description": f"Snapshot of {instance_name} boot disk"
@@ -143,7 +145,7 @@ def create_instance_from_snapshot(compute, project, zone, instance_name,
     """Create an instance from a snapshot."""
     print(f"\nCreating instance '{instance_name}' from snapshot...")
     
-    # Get snapshot URL
+    # Get the snapshot URL
     snapshot = compute.snapshots().get(
         project=project,
         snapshot=snapshot_name
@@ -152,7 +154,7 @@ def create_instance_from_snapshot(compute, project, zone, instance_name,
     snapshot_url = snapshot['selfLink']
     machine_type_url = f"zones/{zone}/machineTypes/{machine_type}"
     
-    # Configure instance
+    # Configuring instance
     config = {
         'name': instance_name,
         'machineType': machine_type_url,
@@ -169,7 +171,7 @@ def create_instance_from_snapshot(compute, project, zone, instance_name,
             }
         ],
         
-        # Network interface with external IP
+        # Assigning Network interface with external IP
         'networkInterfaces': [
             {
                 'network': f'projects/{project}/global/networks/default',
@@ -182,13 +184,13 @@ def create_instance_from_snapshot(compute, project, zone, instance_name,
             }
         ],
         
-        # Apply network tag for firewall
+        # Applying network tag for firewall
         'tags': {
             'items': ['allow-5000']
         }
     }
     
-    # Start timing
+    # Start timer
     start_time = time.time()
     
     operation = compute.instances().insert(
@@ -199,7 +201,7 @@ def create_instance_from_snapshot(compute, project, zone, instance_name,
     
     wait_for_operation(compute, project, zone, operation['name'])
     
-    # End timing
+    # End timer
     end_time = time.time()
     elapsed_time = end_time - start_time
     
@@ -222,9 +224,7 @@ def get_external_ip(compute, project, zone, instance_name):
                     return access_config['natIP']
     return None
 
-# ============================================================================
-# MAIN PROGRAM
-# ============================================================================
+# Defining the main program 
 
 def main():
     """Main function."""
@@ -237,7 +237,7 @@ def main():
     print(f"Snapshot Name: {SNAPSHOT_NAME}")
     
     try:
-        # Step 1: Check if source instance exists
+        # Checking if source instance exists
         print(f"\nChecking if source instance '{SOURCE_INSTANCE_NAME}' exists...")
         if not instance_exists(compute, PROJECT_ID, ZONE, SOURCE_INSTANCE_NAME):
             print(f"\nError: Source instance '{SOURCE_INSTANCE_NAME}' does not exist!")
@@ -245,10 +245,10 @@ def main():
             sys.exit(1)
         print(f"  Source instance found")
         
-        # Step 2: Create snapshot
+        # Creating snapshot
         create_snapshot(compute, PROJECT_ID, ZONE, SOURCE_INSTANCE_NAME, SNAPSHOT_NAME)
         
-        # Step 3: Create cloned instances and measure timing
+        # Creating cloned instances and measure timing
         print(f"\nStep 2: Creating {NUM_CLONES} cloned instances...")
         timings = []
         instance_names = []
@@ -264,7 +264,7 @@ def main():
             )
             timings.append(elapsed)
         
-        # Display results
+        # Displaying results
         print("\n" + "=" * 70)
         print("  SUCCESS! All Instances Created")
         print("=" * 70)
@@ -280,14 +280,14 @@ def main():
         print(f"  Min time: {min(timings):.2f} seconds")
         print(f"  Max time: {max(timings):.2f} seconds")
         
-        # List all instances with IPs
+        # Listing all instances with IPs
         print(f"\nInstance URLs:")
         for name in instance_names:
             ip = get_external_ip(compute, PROJECT_ID, ZONE, name)
             if ip:
                 print(f"  {name}: http://{ip}:5000")
         
-        # Create TIMING.md file
+        # Creating TIMING.md file
         print(f"\nCreating TIMING.md file...")
         with open('TIMING.md', 'w') as f:
             f.write("# Part 2 - Instance Creation Timing Results\n\n")
