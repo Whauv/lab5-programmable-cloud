@@ -1,4 +1,4 @@
-"""#!/bin/bash
+#!/bin/bash
 set -e
 exec > >(tee -a /var/log/startup-script.log)
 exec 2>&1
@@ -34,4 +34,5 @@ nohup flask run -h 0.0.0.0 > /var/log/flask.log 2>&1 &
 
 echo "=== Flask Tutorial Installation Complete at $(date) ==="
 echo "Flask is running on port 5000"
+
 
